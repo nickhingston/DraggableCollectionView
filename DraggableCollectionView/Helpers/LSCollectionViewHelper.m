@@ -322,25 +322,29 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
     } completion:nil];
 }
 
+- (void) setMockCellPosition {
+    mockCell.center = _CGPointAdd(mockCenter, fingerTranslation);
+    
+    // Don't allow scroll outside of collection View
+    CGRect frame = mockCell.frame;
+    UICollectionViewFlowLayout* layout = (UICollectionViewFlowLayout*)self.collectionView.collectionViewLayout;
+    if (layout.scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+        CGFloat zoomExtraHeight = (frame.size.height - frame.size.height/kExpandZoomLevel)/2;
+        frame.origin.y = MAX(layout.sectionInset.top - zoomExtraHeight,MIN( self.collectionView.bounds.size.height - layout.sectionInset.bottom - frame.size.height + zoomExtraHeight, frame.origin.y));
+    }
+    else {
+        CGFloat zoomExtraWidth = (frame.size.width - frame.size.width/kExpandZoomLevel)/2;
+        frame.origin.x = MAX(layout.sectionInset.left - zoomExtraWidth,MIN(self.collectionView.bounds.size.width - layout.sectionInset.right - frame.size.width + zoomExtraWidth, frame.origin.x));
+    }
+    mockCell.frame = frame;
+}
+
 - (void)handlePanGesture:(UIPanGestureRecognizer *)sender
 {
     if(sender.state == UIGestureRecognizerStateChanged) {
         // Move mock to match finger
         fingerTranslation = [sender translationInView:self.collectionView];
-        mockCell.center = _CGPointAdd(mockCenter, fingerTranslation);
-        
-        // Don't allow scroll outside of collection View
-        CGRect frame = mockCell.frame;
-        UICollectionViewFlowLayout* layout = (UICollectionViewFlowLayout*)self.collectionView.collectionViewLayout;
-        if (layout.scrollDirection == UICollectionViewScrollDirectionHorizontal) {
-            CGFloat zoomExtraHeight = (frame.size.height - frame.size.height/kExpandZoomLevel)/2;
-            frame.origin.y = MAX(layout.sectionInset.top - zoomExtraHeight,MIN( self.collectionView.bounds.size.height - layout.sectionInset.bottom - frame.size.height + zoomExtraHeight, frame.origin.y));
-        }
-        else {
-            CGFloat zoomExtraWidth = (frame.size.width - frame.size.width/kExpandZoomLevel)/2;
-            frame.origin.x = MAX(layout.sectionInset.left - zoomExtraWidth,MIN(self.collectionView.bounds.size.width - layout.sectionInset.right - frame.size.width + zoomExtraWidth, frame.origin.x));
-        }
-        mockCell.frame = frame;
+        [self setMockCellPosition];
         
         if (self.collectionView.directionalLockEnabled)
         
@@ -429,7 +433,7 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
     }
     
     mockCenter  = _CGPointAdd(mockCenter, translation);
-    mockCell.center = _CGPointAdd(mockCenter, fingerTranslation);
+    [self setMockCellPosition];
     self.collectionView.contentOffset = _CGPointAdd(contentOffset, translation);
     
     // Warp items while scrolling
