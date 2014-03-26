@@ -10,6 +10,8 @@
 #import "LSCollectionViewLayoutHelper.h"
 #import <QuartzCore/QuartzCore.h>
 
+#define kExpandZoomLevel (1.05f)
+
 static int kObservingCollectionViewLayoutContext;
 
 #ifndef CGGEOMETRY__SUPPORT_H_
@@ -241,7 +243,7 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
             [UIView
              animateWithDuration:0.3
              animations:^{
-                 mockCell.transform = CGAffineTransformMakeScale(1.1f, 1.1f);
+                 mockCell.transform = CGAffineTransformMakeScale(kExpandZoomLevel, kExpandZoomLevel);
              }
              completion:nil];
             
@@ -283,7 +285,7 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
              animateWithDuration:0.3
              animations:^{
                  mockCell.center = layoutAttributes.center;
-                 mockCell.transform = CGAffineTransformMakeScale(1.f, 1.f);
+                 mockCell.transform = CGAffineTransformMakeScale(kExpandZoomLevel, kExpandZoomLevel);
              }
              completion:^(BOOL finished) {
                  [mockCell removeFromSuperview];
@@ -326,6 +328,21 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
         // Move mock to match finger
         fingerTranslation = [sender translationInView:self.collectionView];
         mockCell.center = _CGPointAdd(mockCenter, fingerTranslation);
+        
+        // Don't allow scroll outside of collection View
+        CGRect frame = mockCell.frame;
+        UICollectionViewFlowLayout* layout = (UICollectionViewFlowLayout*)self.collectionView.collectionViewLayout;
+        if (layout.scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+            CGFloat zoomExtraHeight = (frame.size.height - frame.size.height/kExpandZoomLevel)/2;
+            frame.origin.y = MAX(layout.sectionInset.top - zoomExtraHeight,MIN( self.collectionView.bounds.size.height - layout.sectionInset.bottom - frame.size.height + zoomExtraHeight, frame.origin.y));
+        }
+        else {
+            CGFloat zoomExtraWidth = (frame.size.width - frame.size.width/kExpandZoomLevel)/2;
+            frame.origin.x = MAX(layout.sectionInset.left - zoomExtraWidth,MIN(self.collectionView.bounds.size.width - layout.sectionInset.right - frame.size.width + zoomExtraWidth, frame.origin.x));
+        }
+        mockCell.frame = frame;
+        
+        if (self.collectionView.directionalLockEnabled)
         
         // Scroll when necessary
         if (canScroll) {
